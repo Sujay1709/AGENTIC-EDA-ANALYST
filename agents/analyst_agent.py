@@ -67,3 +67,72 @@ def run_analyst_agent(llm: OllamaLLM, df, schema: dict) -> str:
 
     print("[AnalystAgent] Analysis complete.")
     return insights.strip()
+
+
+def build_basic_insights(df, schema: dict, missing_report: dict) -> str:
+    """
+    Deterministic narrative summary — no LLM call. Used by the fast default path
+    so a detailed report can be produced in seconds on any dataset.
+    """
+    rows, cols = schema["shape"]
+    numeric = [c for c in schema.get("numeric_columns", []) if c in df.columns]
+    categorical = [c for c in schema.get("categorical_columns", []) if c in df.columns]
+
+    lines = [
+        f"The dataset has {rows} rows and {cols} columns "
+        f"({len(numeric)} numeric, {len(categorical)} categorical)."
+    ]
+
+    if missing_report["affected_columns"]:
+        worst_col, worst_info = max(
+            missing_report["affected_columns"].items(),
+            key=lambda kv: kv[1]["percent"],
+        )
+        lines.append(
+            f"Overall {missing_report['total_missing_percent']}% of cells are missing; "
+            f"the most affected column is {worst_col} ({worst_info['percent']}%)."
+        )
+    else:
+        lines.append("No missing values were detected.")
+
+    # Per-numeric-column shape (cap to keep the section readable).
+    for col in numeric[:8]:
+        s = df[col].dropna()
+        if s.empty:
+            continue
+        skew = s.skew() if s.nunique() > 1 else 0.0
+        shape = (
+            "right-skewed" if skew > 1
+            else "left-skewed" if skew < -1
+            else "roughly symmetric"
+        )
+        lines.append(
+            f"{col}: mean {s.mean():.2f}, median {s.median():.2f}, "
+            f"std {s.std():.2f}, range [{s.min():.2f}, {s.max():.2f}] ({shape})."
+        )
+
+    # Strongest linear relationship among numeric columns.
+    if len(numeric) >= 2:
+        corr = df[numeric].corr().abs()
+        best = (0.0, None, None)
+        for i, a in enumerate(numeric):
+            for b in numeric[i + 1:]:
+                val = corr.loc[a, b]
+                if val == val and val > best[0]:
+                    best = (val, a, b)
+        if best[1] is not None:
+            lines.append(
+                f"Strongest numeric correlation: {best[1]} and {best[2]} "
+                f"(|r| = {best[0]:.2f})."
+            )
+
+    # Dominant categories.
+    for col in categorical[:5]:
+        vc = df[col].value_counts()
+        if vc.empty:
+            continue
+        top = vc.index[0]
+        share = round(vc.iloc[0] / vc.sum() * 100, 1)
+        lines.append(f"{col}: most common value is '{top}' ({share}% of non-null rows).")
+
+    return "\n".join(lines)

@@ -33,11 +33,20 @@ st.write(
 
 with st.sidebar:
     st.header("Settings")
-    model = st.text_input("Ollama model", value="mistral")
-    st.caption(
-        "Requires [Ollama](https://ollama.com) running locally with the model "
-        "pulled (e.g. `ollama pull mistral`)."
+    ai_narrative = st.checkbox(
+        "Add AI narrative (slower)",
+        value=False,
+        help="Use a local LLM for missing-value suggestions and insights. "
+             "Off = fast deterministic report in seconds (no Ollama needed).",
     )
+    model = st.text_input("Ollama model", value="mistral", disabled=not ai_narrative)
+    if ai_narrative:
+        st.caption(
+            "Requires [Ollama](https://ollama.com) running locally with the model "
+            "pulled (e.g. `ollama pull mistral`)."
+        )
+    else:
+        st.caption("Fast mode: deterministic analysis, plots, and suggestions — no LLM call.")
 
 uploaded = st.file_uploader(
     "Upload a dataset", type=["csv", "tsv", "txt", "xlsx", "xls", "json"]
@@ -55,11 +64,19 @@ if uploaded is not None and st.button("Generate Report", type="primary"):
     dataset_name = os.path.splitext(uploaded.name)[0]
     output_dir = os.path.join(APP_DIR, "outputs", dataset_name)
 
+    spinner_msg = (
+        "The agent is analyzing your data — this can take 30–90s with a local LLM..."
+        if ai_narrative
+        else "Analyzing your data and building the report (a few seconds)..."
+    )
     try:
-        with st.spinner(
-            "The agent is analyzing your data — this can take 30–90s with a local LLM..."
-        ):
-            result = run_pipeline(input_path, model=model, output_dir=output_dir)
+        with st.spinner(spinner_msg):
+            result = run_pipeline(
+                input_path,
+                model=model,
+                output_dir=output_dir,
+                ai_narrative=ai_narrative,
+            )
     except Exception as e:  # noqa: BLE001 — surface any failure to the user
         st.error(
             f"Pipeline failed: {e}\n\n"
@@ -89,5 +106,6 @@ if uploaded is not None and st.button("Generate Report", type="primary"):
                 )
                 cols[i % 2].image(plot_path, caption=caption, use_container_width=True)
 
-        with st.expander("AI-generated insights"):
+        insights_label = "AI-generated insights" if ai_narrative else "Insights"
+        with st.expander(insights_label):
             st.write(result["insights"])

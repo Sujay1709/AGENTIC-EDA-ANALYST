@@ -11,10 +11,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from utils.schema_extractor import extract_schema
 from utils.output_manager import build_report
-from utils.missing_analyzer import analyze_missing, save_missing_heatmap
+from utils.missing_analyzer import (
+    analyze_missing,
+    save_missing_heatmap,
+    suggest_missing_strategies,
+)
 from utils.fallback_plots import generate_fallback_plots
 from agents.coder_agent import run_coder_agent
-from agents.analyst_agent import run_analyst_agent
+from agents.analyst_agent import run_analyst_agent, build_basic_insights
 from agents.missing_values_agent import run_missing_values_agent
 
 
@@ -23,6 +27,7 @@ def run_pipeline(
     model: str = "mistral",
     output_dir: str = "outputs",
     use_llm_plots: bool = False,
+    ai_narrative: bool = False,
 ) -> dict:
     """
     Run the full EDA pipeline end to end.
@@ -34,26 +39,36 @@ def run_pipeline(
         use_llm_plots: When True, let the LLM coder agent generate the plots
             (with deterministic fallback). When False (default), use the
             deterministic plotter directly — reliable for any dataset.
+        ai_narrative: When True, use the LLM for the missing-value suggestions and
+            the narrative insights (slower, needs Ollama). When False (default),
+            both are generated deterministically — the report is produced in
+            seconds and needs no LLM at all.
 
     Returns:
         dict with keys: report_path, saved_plots, insights, missing_report
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    # --- Initialize LLM ---
-    print("[Pipeline] Initializing LLM...")
-    llm = OllamaLLM(model=model)
-
     # --- Extract schema ---
     print("[Pipeline] Extracting dataset schema...")
     df, schema = extract_schema(input_path)
     print(f"[Pipeline] Dataset loaded: {schema['shape'][0]} rows x {schema['shape'][1]} columns")
 
+    # --- LLM is only needed for the optional AI paths ---
+    llm = None
+    if ai_narrative or use_llm_plots:
+        print("[Pipeline] Initializing LLM...")
+        # Cap output length and pin temperature so generations are fast and stable.
+        llm = OllamaLLM(model=model, temperature=0, num_predict=700)
+
     # --- Deep missing-values analysis ---
     print("[Pipeline] Analyzing missing values...")
     missing_report = analyze_missing(df)
     save_missing_heatmap(df, output_dir)
-    missing_suggestions = run_missing_values_agent(llm, schema, missing_report)
+    if ai_narrative:
+        missing_suggestions = run_missing_values_agent(llm, schema, missing_report)
+    else:
+        missing_suggestions = suggest_missing_strategies(df, schema, missing_report)
 
     # --- Visualizations ---
     if use_llm_plots:
@@ -71,8 +86,11 @@ def run_pipeline(
         )
         print(f"[Pipeline] Done. {len(saved_plots)} plot(s) saved.")
 
-    # --- Analyst agent (narrative insights) ---
-    insights = run_analyst_agent(llm=llm, df=df, schema=schema)
+    # --- Narrative insights ---
+    if ai_narrative:
+        insights = run_analyst_agent(llm=llm, df=df, schema=schema)
+    else:
+        insights = build_basic_insights(df, schema, missing_report)
 
     # --- Build PDF report ---
     print("[Pipeline] Building PDF report...")
@@ -122,6 +140,12 @@ def main():
         help="Generate plots with the LLM coder agent instead of the "
              "deterministic plotter (default: deterministic)."
     )
+    parser.add_argument(
+        "--ai",
+        action="store_true",
+        help="Use the LLM for missing-value suggestions and narrative insights "
+             "(slower, needs Ollama). Default is fast deterministic analysis."
+    )
     args = parser.parse_args()
 
     # --- Enforce working directory ---
@@ -140,6 +164,7 @@ def main():
         model=args.model,
         output_dir=args.output_dir,
         use_llm_plots=args.use_llm_plots,
+        ai_narrative=args.ai,
     )
     report_path = result["report_path"]
     saved_plots = result["saved_plots"]

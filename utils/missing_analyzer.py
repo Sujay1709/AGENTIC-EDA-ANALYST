@@ -63,6 +63,58 @@ def analyze_missing(df) -> dict:
     }
 
 
+def suggest_missing_strategies(df, schema: dict, missing_report: dict) -> str:
+    """
+    Deterministic, rule-based recommendations for handling missing values, with
+    concrete pandas code per affected column. No LLM call — instant and reliable
+    on any dataset.
+    """
+    affected = missing_report["affected_columns"]
+    if not affected:
+        return "No missing values detected - no imputation needed."
+
+    numeric = set(schema.get("numeric_columns", []))
+    categorical = set(schema.get("categorical_columns", []))
+    datetime_cols = set(schema.get("datetime_columns", []))
+
+    blocks = []
+    for col, info in affected.items():
+        pct = info["percent"]
+        if pct > 50:
+            strategy = (
+                f"{pct}% missing - too sparse to impute reliably; drop the column "
+                "(optionally keep a 'was_missing' flag first)."
+            )
+            code = f"df = df.drop(columns=['{col}'])"
+        elif col in numeric:
+            strategy = f"Numeric with {pct}% missing - impute with the median (robust to outliers)."
+            code = f"df['{col}'] = df['{col}'].fillna(df['{col}'].median())"
+        elif col in datetime_cols:
+            strategy = f"Datetime with {pct}% missing - fill in time order (forward then back)."
+            code = f"df['{col}'] = df['{col}'].ffill().bfill()"
+        elif col in categorical:
+            strategy = (
+                f"Categorical with {pct}% missing - impute the most frequent value "
+                "or add an explicit 'Unknown' category."
+            )
+            code = f"df['{col}'] = df['{col}'].fillna(df['{col}'].mode().iloc[0])"
+        else:
+            strategy = f"{pct}% missing - fill with a sensible default or drop the affected rows."
+            code = f"df['{col}'] = df['{col}'].fillna(df['{col}'].mode().iloc[0])"
+        blocks.append(f"COLUMN: {col}\nSTRATEGY: {strategy}\nCODE: {code}")
+
+    header = (
+        "Rule-based recommendations to reduce missing values. Apply per column, "
+        "then re-check with df.isnull().sum():\n"
+    )
+    tips = (
+        "\nGeneral tips to reduce missingness: fix upstream data-collection gaps, "
+        "join reference data to backfill, and prefer model-based imputation "
+        "(e.g. sklearn IterativeImputer) when columns are correlated."
+    )
+    return header + "\n\n".join(blocks) + "\n" + tips
+
+
 def save_missing_heatmap(df, output_dir: str):
     """
     Save a missing-values heatmap to output_dir/missing_values.png.
