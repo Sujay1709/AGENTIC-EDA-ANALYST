@@ -26,9 +26,9 @@ st.set_page_config(
 
 st.title("📊 Agentic EDA Report Generator")
 st.write(
-    "Upload a CSV and an AI agent will analyze it — digging into missing values, "
-    "generating visualizations, and producing a downloadable PDF report with the "
-    "Python code it used."
+    "Upload a dataset (CSV, Excel, JSON, or TSV) and an AI agent will analyze it — "
+    "digging into missing values, generating visualizations, and producing a "
+    "downloadable PDF report with the Python code it used."
 )
 
 with st.sidebar:
@@ -39,7 +39,9 @@ with st.sidebar:
         "pulled (e.g. `ollama pull mistral`)."
     )
 
-uploaded = st.file_uploader("Upload a CSV file", type=["csv"])
+uploaded = st.file_uploader(
+    "Upload a dataset", type=["csv", "tsv", "txt", "xlsx", "xls", "json"]
+)
 
 if uploaded is not None and st.button("Generate Report", type="primary"):
     # Persist the upload so the pipeline can read it by path.

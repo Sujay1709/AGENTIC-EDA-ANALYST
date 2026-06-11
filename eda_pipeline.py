@@ -1,5 +1,6 @@
 import os
 import sys
+import inspect
 import argparse
 import platform
 import subprocess
@@ -11,17 +12,28 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.schema_extractor import extract_schema
 from utils.output_manager import build_report
 from utils.missing_analyzer import analyze_missing, save_missing_heatmap
+from utils.fallback_plots import generate_fallback_plots
 from agents.coder_agent import run_coder_agent
 from agents.analyst_agent import run_analyst_agent
 from agents.missing_values_agent import run_missing_values_agent
 
 
-def run_pipeline(input_path: str, model: str = "mistral", output_dir: str = "outputs") -> dict:
+def run_pipeline(
+    input_path: str,
+    model: str = "mistral",
+    output_dir: str = "outputs",
+    use_llm_plots: bool = False,
+) -> dict:
     """
     Run the full EDA pipeline end to end.
 
     Shared entry point for both the CLI (main) and the Streamlit app. Does NOT
     auto-open the PDF — callers decide what to do with the result.
+
+    Args:
+        use_llm_plots: When True, let the LLM coder agent generate the plots
+            (with deterministic fallback). When False (default), use the
+            deterministic plotter directly — reliable for any dataset.
 
     Returns:
         dict with keys: report_path, saved_plots, insights, missing_report
@@ -43,10 +55,21 @@ def run_pipeline(input_path: str, model: str = "mistral", output_dir: str = "out
     save_missing_heatmap(df, output_dir)
     missing_suggestions = run_missing_values_agent(llm, schema, missing_report)
 
-    # --- Coder agent (visualizations) ---
-    generated_code, saved_plots = run_coder_agent(
-        llm=llm, df=df, schema=schema, output_dir=output_dir
-    )
+    # --- Visualizations ---
+    if use_llm_plots:
+        # LLM-generated plots, with deterministic fallback inside the agent.
+        generated_code, saved_plots = run_coder_agent(
+            llm=llm, df=df, schema=schema, output_dir=output_dir
+        )
+    else:
+        # Deterministic plotter as the primary, reliable path for any dataset.
+        print("[Pipeline] Generating plots (deterministic)...")
+        saved_plots = generate_fallback_plots(df, schema, output_dir)
+        generated_code = (
+            "# Plots produced by the deterministic plotter:\n\n"
+            + inspect.getsource(generate_fallback_plots)
+        )
+        print(f"[Pipeline] Done. {len(saved_plots)} plot(s) saved.")
 
     # --- Analyst agent (narrative insights) ---
     insights = run_analyst_agent(llm=llm, df=df, schema=schema)
@@ -93,6 +116,12 @@ def main():
         default="outputs",
         help="Directory for plots and PDF report (default: outputs/)"
     )
+    parser.add_argument(
+        "--use-llm-plots",
+        action="store_true",
+        help="Generate plots with the LLM coder agent instead of the "
+             "deterministic plotter (default: deterministic)."
+    )
     args = parser.parse_args()
 
     # --- Enforce working directory ---
@@ -106,7 +135,12 @@ def main():
     print(f"  Output: {args.output_dir}")
     print(f"{'='*50}\n")
 
-    result = run_pipeline(args.input, args.model, args.output_dir)
+    result = run_pipeline(
+        args.input,
+        model=args.model,
+        output_dir=args.output_dir,
+        use_llm_plots=args.use_llm_plots,
+    )
     report_path = result["report_path"]
     saved_plots = result["saved_plots"]
 

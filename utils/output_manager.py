@@ -100,6 +100,42 @@ def add_plot(pdf: ReportPDF, image_path: str, caption: str = ""):
     pdf.ln(4)
 
 
+# Plot filename prefix -> (sort order, caption label). Keeps related figures
+# grouped together in the report and gives each a human-readable caption. These
+# prefixes are produced by fallback_plots.generate_fallback_plots.
+_PLOT_ORDER = [
+    ("dist_", 0, "Distribution"),
+    ("box_", 1, "Boxplot"),
+    ("correlation_heatmap", 2, "Correlation Heatmap"),
+    ("scatter_", 3, "Relationship"),
+    ("trend_over_", 4, "Trend over"),
+    ("value_count_", 5, "Value Counts"),
+]
+
+
+def _plot_caption(plot_path: str) -> str:
+    """Build a friendly caption from a plot filename's prefix."""
+    name = os.path.splitext(os.path.basename(plot_path))[0]
+    if name == "correlation_heatmap":
+        return "Correlation Heatmap"
+    if name.startswith("scatter_"):
+        body = name[len("scatter_"):].replace("_vs_", " vs ").replace("_", " ")
+        return f"Relationship: {body}"
+    for prefix, _, label in _PLOT_ORDER:
+        if prefix.endswith("_") and name.startswith(prefix):
+            return f"{label}: {name[len(prefix):].replace('_', ' ')}"
+    return name.replace("_", " ").title()
+
+
+def _plot_sort_key(plot_path: str) -> int:
+    """Order plots by group so related figures sit together in the report."""
+    name = os.path.basename(plot_path)
+    for prefix, order, _ in _PLOT_ORDER:
+        if name.startswith(prefix):
+            return order
+    return len(_PLOT_ORDER)
+
+
 def build_report(
     schema: dict,
     insights: str,
@@ -204,6 +240,13 @@ def build_report(
     heatmap_path = os.path.join(output_dir, "missing_values.png")
     add_plot(pdf, heatmap_path, caption="Missing Values Map")
 
+    # Per-column missing-% bar chart (saved as missing_bar.png by the plotter)
+    add_plot(
+        pdf,
+        os.path.join(output_dir, "missing_bar.png"),
+        caption="Missing Values by Column",
+    )
+
     # Per-column handling recommendations from the missing-values agent
     if missing_suggestions:
         pdf.ln(1)
@@ -214,13 +257,14 @@ def build_report(
         add_body_text(pdf, _latin1(missing_suggestions))
 
     # --- Section 3: Visualizations ---
-    # Skip the missing-values heatmap here — it is already shown in Section 2.
-    viz_plots = [p for p in saved_plots if os.path.basename(p) != "missing_values.png"]
+    # Skip the missing-values figures here — they are already shown in Section 2.
+    missing_figs = {"missing_values.png", "missing_bar.png"}
+    viz_plots = [p for p in saved_plots if os.path.basename(p) not in missing_figs]
+    viz_plots.sort(key=_plot_sort_key)  # group related figures together
     if viz_plots:
         add_section_title(pdf, "3. Visualizations")
         for plot_path in viz_plots:
-            caption = os.path.splitext(os.path.basename(plot_path))[0].replace("_", " ").title()
-            add_plot(pdf, plot_path, caption=caption)
+            add_plot(pdf, plot_path, caption=_plot_caption(plot_path))
 
     # --- Section 4: AI Insights ---
     add_section_title(pdf, "4. AI-Generated Insights")
