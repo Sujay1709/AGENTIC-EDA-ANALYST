@@ -1,0 +1,17 @@
+# Generated outputs
+outputs/
+data/uploads/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+
+# OS
+.DS_Store
