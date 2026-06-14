@@ -97,7 +97,20 @@ uploaded = st.file_uploader(
     "Upload a dataset", type=["csv", "tsv", "txt", "xlsx", "xls", "json"]
 )
 
-if uploaded is not None and st.button("Generate Report", type="primary"):
+# When a different file is uploaded, drop any previously generated report so we
+# don't show stale results for the wrong dataset.
+if uploaded is not None and st.session_state.get("uploaded_name") != uploaded.name:
+    st.session_state.uploaded_name = uploaded.name
+    for key in ("result", "report_path", "ai_narrative_used"):
+        st.session_state.pop(key, None)
+
+# Gate the button on having a file, but keep it as its own widget. Nesting the
+# results inside `if st.button(...)` makes them vanish on the next rerun (e.g.
+# when the download button is clicked), so we persist results in session_state
+# and render them independently below.
+generate = st.button("Generate Report", type="primary", disabled=uploaded is None)
+
+if generate and uploaded is not None:
     # Persist the upload so the pipeline can read it by path.
     upload_dir = os.path.join(APP_DIR, "data", "uploads")
     os.makedirs(upload_dir, exist_ok=True)
@@ -123,34 +136,53 @@ if uploaded is not None and st.button("Generate Report", type="primary"):
                 ai_narrative=ai_narrative,
             )
     except Exception as e:  # noqa: BLE001 — surface any failure to the user
+        for key in ("result", "report_path", "ai_narrative_used"):
+            st.session_state.pop(key, None)
         st.error(
             f"Pipeline failed: {e}\n\n"
             f"Is Ollama running and is the model available? Try `ollama pull {model}`."
         )
     else:
-        st.success("Report generated.")
+        # Stash results so they survive reruns triggered by other widgets
+        # (notably the download button below).
+        st.session_state.result = result
+        st.session_state.report_path = result["report_path"]
+        st.session_state.ai_narrative_used = ai_narrative
 
-        report_path = result["report_path"]
+# Render the generated report from session_state. This runs on every rerun, so
+# clicking the download button no longer wipes the visualizations and insights.
+if st.session_state.get("result"):
+    result = st.session_state.result
+    report_path = st.session_state.report_path
+
+    st.success("Report generated.")
+
+    if os.path.exists(report_path):
         with open(report_path, "rb") as f:
             st.download_button(
                 "⬇️ Download PDF Report",
                 data=f.read(),
                 file_name=os.path.basename(report_path),
                 mime="application/pdf",
+                key="download_report",
             )
 
-        plots = [p for p in result["saved_plots"] if os.path.exists(p)]
-        if plots:
-            st.subheader("Visualizations")
-            cols = st.columns(2)
-            for i, plot_path in enumerate(plots):
-                caption = (
-                    os.path.splitext(os.path.basename(plot_path))[0]
-                    .replace("_", " ")
-                    .title()
-                )
-                cols[i % 2].image(plot_path, caption=caption, use_container_width=True)
+    plots = [p for p in result["saved_plots"] if os.path.exists(p)]
+    if plots:
+        st.subheader("Visualizations")
+        cols = st.columns(2)
+        for i, plot_path in enumerate(plots):
+            caption = (
+                os.path.splitext(os.path.basename(plot_path))[0]
+                .replace("_", " ")
+                .title()
+            )
+            cols[i % 2].image(plot_path, caption=caption, use_container_width=True)
 
-        insights_label = "AI-generated insights" if ai_narrative else "Insights"
-        with st.expander(insights_label):
-            st.write(result["insights"])
+    insights_label = (
+        "AI-generated insights"
+        if st.session_state.get("ai_narrative_used")
+        else "Insights"
+    )
+    with st.expander(insights_label):
+        st.write(result["insights"])
