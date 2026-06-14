@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Agentic EDA Pipeline</title>
+<style>
+/* ── Reset & base ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:    #121C30;
+  --navymid: #1C2C48;
+  --teal:    #2A8C7E;
+  --teallt:  #38B2A2;
+  --coral:   #C0464E;
+  --gold:    #AC862C;
+  --off:     #F6F7F9;
+  --card:    #FFFFFF;
+  --dark:    #161A20;
+  --mid:     #52606A;
+  --light:   #98A2AE;
+  --white:   #FFFFFF;
+  --mono:    'Courier New', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--navy);
+  color: var(--white);
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+
+/* ── Typography ─────────────────────────────────────────────── */
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
+/* ── Utility ────────────────────────────────────────────────── */
+.container { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+.teal  { color: var(--teal); }
+.coral { color: var(--coral); }
+.gold  { color: var(--gold); }
+.light { color: var(--light); }
+
+/* ── Navigation ─────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; height: 56px;
+  background: rgba(18,28,48,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(42,140,126,.18);
+}
+
+.nav-logo {
+  font-size: 13px; font-weight: 700; letter-spacing: .04em;
+  color: var(--white);
+}
+.nav-logo span { color: var(--teal); }
+
+.nav-links {
+  display: flex; gap: 28px; list-style: none;
+}
+.nav-links a {
+  font-size: 12.5px; color: var(--light); text-decoration: none;
+  transition: color .2s;
+}
+.nav-links a:hover { color: var(--teal); }
+
+.nav-cta {
+  font-size: 12px; font-weight: 600;
+  padding: 7px 18px;
+  background: var(--teal); color: var(--white);
+  border-radius: 5px; text-decoration: none;
+  transition: background .2s;
+}
+.nav-cta:hover { background: var(--teallt); }
+
+/* ── Hero ───────────────────────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 100px 0 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Diagonal grid overlay */
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(42,140,126,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42,140,126,.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Left teal stripe */
+.hero::after {
+  content: '';
+  position: absolute; top: 0; left: 0;
+  width: 4px; height: 100%;
+  background: var(--teal);
+}
+
+.hero-inner {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 60px; align-items: center;
+}
+
+.hero-eyebrow { margin-bottom: 16px; }
+
+.hero h1 {
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -.02em;
+  margin-bottom: 20px;
+}
+
+.hero h1 em {
+  font-style: normal;
+  color: var(--teal);
+}
+
+.hero-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,.72);
+  max-width: 420px;
+  margin-bottom: 36px;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 48px;
+}
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px;
+  background: var(--teal); color: var(--white);
+  font-size: 14px; font-weight: 600;
+  border-radius: 6px; text-decoration: none;
+  transition: background .2s, transform .15s;
+}
+.btn-primary:hover { background: var(--teallt); transform: translateY(-1px); }
+
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px;
+  border: 1px solid rgba(42,140,126,.4);
+  color: var(--teal);
+  font-size: 14px; font-weight: 600;
+  border-radius: 6px; text-decoration: none;
+  transition: border-color .2s, background .2s;
+}
+.btn-outline:hover { border-color: var(--teal); background: rgba(42,140,126,.08); }
+
+/* Hero stat chips */
+.hero-stats {
+  display: flex; gap: 24px; flex-wrap: wrap;
+}
+.stat-chip {
+  display: flex; flex-direction: column;
+}
+.stat-chip .val {
+  font-size: 26px; font-weight: 800;
+  color: var(--teal); line-height: 1;
+}
+.stat-chip .lbl {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--light); margin-top: 4px;
+}
+
+/* Hero right — terminal mockup */
+.terminal {
+  background: #0D1623;
+  border: 1px solid rgba(42,140,126,.25);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,.5);
+}
+
+.term-bar {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 14px;
+  background: #111D2E;
+  border-bottom: 1px solid rgba(42,140,126,.14);
+}
+.term-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+}
+.term-dot:nth-child(1) { background: #FF5F57; }
+.term-dot:nth-child(2) { background: #FFBD2E; }
+.term-dot:nth-child(3) { background: #28C840; }
+.term-title {
+  margin-left: 8px; font-size: 11px; color: var(--light);
+  font-family: var(--mono);
+}
+
+.term-body {
+  padding: 20px 18px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.8;
+}
+.term-body .prompt { color: var(--teal); }
+.term-body .cmd    { color: #E8EDF2; }
+.term-body .out    { color: var(--light); }
+.term-body .ok     { color: #28C840; }
+.term-body .section{ color: var(--gold); }
+.term-body .val    { color: var(--teallt); }
+.term-cursor {
+  display: inline-block; width: 8px; height: 14px;
+  background: var(--teal);
+  animation: blink 1.1s step-end infinite;
+  vertical-align: text-bottom;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── How it works ───────────────────────────────────────────── */
+.section {
+  padding: 100px 0;
+}
+.section-dark  { background: var(--navy); }
+.section-light { background: var(--navymid); }
+
+.section-header { text-align: center; margin-bottom: 64px; }
+.section-header h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  margin-top: 10px;
+}
+.section-header p {
+  font-size: 16px;
+  color: rgba(255,255,255,.6);
+  max-width: 540px;
+  margin: 14px auto 0;
+  line-height: 1.7;
+}
+
+/* Pipeline steps */
+.pipeline {
+  display: flex; flex-direction: column; gap: 0;
+  position: relative;
+  max-width: 780px; margin: 0 auto;
+}
+.pipeline::before {
+  content: '';
+  position: absolute; left: 23px; top: 36px; bottom: 36px;
+  width: 2px; background: linear-gradient(to bottom, var(--teal), rgba(42,140,126,.1));
+}
+
+.step {
+  display: grid; grid-template-columns: 48px 1fr;
+  gap: 20px; align-items: flex-start;
+  padding: 24px 0;
+}
+.step-num {
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--navymid);
+  border: 2px solid var(--teal);
+  border-radius: 50%;
+  font-size: 14px; font-weight: 800;
+  color: var(--teal);
+  position: relative; z-index: 1;
+  flex-shrink: 0;
+}
+.step-content h3 {
+  font-size: 17px; font-weight: 700;
+  margin-bottom: 6px;
+}
+.step-content p {
+  font-size: 14px; color: rgba(255,255,255,.62);
+  line-height: 1.65;
+}
+.step-tag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 2px 9px;
+  background: rgba(42,140,126,.15);
+  border: 1px solid rgba(42,140,126,.3);
+  border-radius: 3px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--teal);
+}
+
+/* ── Feature cards ──────────────────────────────────────────── */
+.cards {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+@media (max-width: 780px) { .cards { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .cards { grid-template-columns: 1fr; } }
+
+.card {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-top: 3px solid var(--teal);
+  border-radius: 8px;
+  padding: 28px 24px;
+  transition: border-color .2s, transform .2s;
+}
+.card:hover {
+  border-color: var(--teal);
+  transform: translateY(-3px);
+}
+.card-icon {
+  font-size: 28px; margin-bottom: 14px;
+  line-height: 1;
+}
+.card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.card p  { font-size: 13px; color: rgba(255,255,255,.58); line-height: 1.65; }
+.card-coral { border-top-color: var(--coral); }
+.card-gold  { border-top-color: var(--gold);  }
+
+/* ── Code block ─────────────────────────────────────────────── */
+.code-demo {
+  background: #0A1220;
+  border: 1px solid rgba(42,140,126,.2);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 40px auto 0;
+  max-width: 720px;
+}
+.code-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 16px;
+  background: #0D1623;
+  border-bottom: 1px solid rgba(42,140,126,.12);
+  font-family: var(--mono); font-size: 11px;
+  color: var(--light);
+}
+.code-body {
+  padding: 20px 20px 24px;
+  font-family: var(--mono);
+  font-size: 12.5px; line-height: 1.9;
+  overflow-x: auto;
+}
+.code-body .c  { color: #4A90A4; }   /* comment */
+.code-body .k  { color: #C792EA; }   /* keyword */
+.code-body .s  { color: #C3E88D; }   /* string */
+.code-body .n  { color: #82AAFF; }   /* name */
+.code-body .p  { color: var(--light); } /* punctuation */
+.code-body .v  { color: var(--teallt); } /* value */
+
+/* ── Report preview ─────────────────────────────────────────── */
+.report-preview {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 14px; margin-top: 48px;
+}
+@media (max-width: 640px) { .report-preview { grid-template-columns: 1fr 1fr; } }
+
+.page-thumb {
+  background: var(--navymid);
+  border: 1px solid rgba(42,140,126,.2);
+  border-radius: 6px;
+  padding: 16px 14px;
+  font-size: 10.5px; line-height: 1.6;
+}
+.page-thumb .pg-label {
+  font-size: 8px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--teal);
+  margin-bottom: 8px;
+}
+.page-thumb .pg-bar {
+  height: 5px; border-radius: 2px;
+  background: rgba(42,140,126,.35);
+  margin-bottom: 5px;
+}
+.page-thumb .pg-bar.full   { width: 100%; }
+.page-thumb .pg-bar.w80    { width: 80%; }
+.page-thumb .pg-bar.w60    { width: 60%; }
+.page-thumb .pg-bar.w45    { width: 45%; }
+.page-thumb .pg-chart {
+  height: 48px; background: rgba(42,140,126,.1);
+  border: 1px solid rgba(42,140,126,.2);
+  border-radius: 3px; margin: 8px 0;
+  display: flex; align-items: flex-end;
+  gap: 3px; padding: 4px;
+  overflow: hidden;
+}
+.page-thumb .bar {
+  flex: 1; border-radius: 1px;
+  background: var(--teal); opacity: .7;
+}
+
+/* ── Install steps ──────────────────────────────────────────── */
+.install-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 32px; margin-top: 40px;
+}
+@media (max-width: 640px) { .install-grid { grid-template-columns: 1fr; } }
+
+.install-step { }
+.install-step h4 {
+  font-size: 13px; font-weight: 700;
+  color: var(--teal); margin-bottom: 10px;
+}
+.install-code {
+  background: #0A1220;
+  border: 1px solid rgba(42,140,126,.18);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 12px; line-height: 1.9;
+  color: #C8D6E2;
+  overflow-x: auto;
+}
+.install-code .teal { color: var(--teal); }
+.install-code .gray { color: var(--light); }
+
+/* ── Footer ─────────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid rgba(42,140,126,.15);
+  padding: 40px 28px;
+  text-align: center;
+}
+footer .foot-logo {
+  font-size: 15px; font-weight: 800;
+  color: var(--white); margin-bottom: 10px;
+}
+footer .foot-logo span { color: var(--teal); }
+footer p {
+  font-size: 12.5px; color: var(--light); line-height: 1.7;
+}
+footer a { color: var(--teal); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+.foot-links {
+  display: flex; justify-content: center; gap: 24px;
+  margin-top: 16px; list-style: none;
+}
+.foot-links a { font-size: 12px; color: var(--light); text-decoration: none; }
+.foot-links a:hover { color: var(--teal); }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 40px; }
+  .terminal { display: none; }
+  nav .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Agentic <span>EDA</span> Pipeline</div>
+  <ul class="nav-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#quickstart">Quick start</a></li>
+    <li><a href="#report">Report</a></li>
+  </ul>
+  <a class="nav-cta" href="?app=1" target="_top">
+    Launch app →
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+
+      <div>
+        <div class="hero-eyebrow">
+          <span class="label">Open source · Local LLM · No paid APIs</span>
+        </div>
+        <h1>Drop a CSV.<br>Get an <em>analyst-grade</em><br>PDF report.</h1>
+        <p class="hero-sub">
+          An agentic pipeline that extracts schema, analyses missing values,
+          generates visualisations, and writes a structured 30-page PDF — in seconds,
+          on your own machine.
+        </p>
+        <div class="hero-actions">
+          <a class="btn-primary" href="?app=1" target="_top">Launch the app →</a>
+          <a class="btn-outline" href="#quickstart">
+            How it works ↓
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-chip">
+            <span class="val">6</span>
+            <span class="lbl">Report sections</span>
+          </div>
+          <div class="stat-chip">
+            <span class="val">30</span>
+            <span class="lbl">Max pages</span>
+          </div>
+          <div class="stat-chip">
+            <span class="val">0</span>
+            <span class="lbl">Paid APIs</span>
+          </div>
+          <div class="stat-chip">
+            <span class="val">5s</span>
+            <span class="lbl">Fast mode</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal mockup -->
+      <div class="terminal">
+        <div class="term-bar">
+          <div class="term-dot"></div>
+          <div class="term-dot"></div>
+          <div class="term-dot"></div>
+          <span class="term-title">bash — eda_pipeline</span>
+        </div>
+        <div class="term-body">
+          <div><span class="prompt">$</span> <span class="cmd">python eda_pipeline.py --input data/titanic.csv</span></div>
+          <div class="out">&nbsp;</div>
+          <div><span class="section">[Pipeline]</span> <span class="out">Loading dataset and extracting schema…</span></div>
+          <div><span class="section">[Pipeline]</span> <span class="val">891 rows × 12 columns</span></div>
+          <div><span class="section">[Pipeline]</span> <span class="out">Analysing missing values…</span></div>
+          <div><span class="section">[Pipeline]</span> <span class="out">Generating visualisations…</span></div>
+          <div><span class="val">            18 chart(s) generated.</span></div>
+          <div><span class="section">[Pipeline]</span> <span class="out">Building PDF report…</span></div>
+          <div><span class="ok">[OutputMgr]</span> <span class="out">PDF saved → outputs/titanic/</span></div>
+          <div class="out">&nbsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;eda_report_20260613.pdf</div>
+          <div class="out">&nbsp;</div>
+          <div><span class="ok">✓</span> <span class="out">Done in </span><span class="val">4.2 s</span></div>
+          <div><span class="prompt">$</span> <span class="term-cursor"></span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section section-light" id="how">
+  <div class="container">
+    <div class="section-header">
+      <span class="label">Pipeline</span>
+      <h2>Six steps. One command.</h2>
+      <p>The same orchestrator runs in both the CLI and the Streamlit UI.
+         State lives in return dicts — the UI is just a display layer.</p>
+    </div>
+
+    <div class="pipeline">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Schema extraction</h3>
+          <p>Loads CSV, Excel, JSON, or TSV. Infers datetime columns and
+             hidden-numeric columns (e.g. "$1,200" → 1200). Passes only
+             structural metadata downstream — never raw rows.</p>
+          <span class="step-tag">schema_extractor.py</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Missing-values analysis</h3>
+          <p>Per-column null counts and percentages, co-missingness correlation
+             between affected columns, high-missing flagging, and a viridis heatmap.</p>
+          <span class="step-tag">missing_analyzer.py</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Visualisations</h3>
+          <p>Priority-ranked deterministic charts: correlation heatmap → missing bar →
+             distributions → boxplots → value-counts → scatter plots. Identifier
+             columns (Name, ID, Ticket) are automatically excluded.</p>
+          <span class="step-tag">plotter.py</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h3>AI narrative <span class="light" style="font-weight:400;font-size:13px">(optional)</span></h3>
+          <p>Mistral via Ollama reads the actual computed statistics and writes
+             insights as a senior data scientist would — key patterns, data quality
+             issues, correlations, and modelling recommendations.</p>
+          <span class="step-tag">llm_agents.py</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h3>Python scripts</h3>
+          <p>Ready-to-run preprocessing code tailored to the specific dataset:
+             drop high-missing columns, impute, one-hot encode, scale, and
+             stratified train/test split.</p>
+          <span class="step-tag">report_builder.py §5</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <h3>PDF report</h3>
+          <p>fpdf2 assembles a professional, page-capped PDF. If content would
+             exceed 30 pages, lower-priority charts are trimmed first.
+             The most informative content always appears.</p>
+          <span class="step-tag">report_builder.py</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section section-dark" id="features">
+  <div class="container">
+    <div class="section-header">
+      <span class="label">Features</span>
+      <h2>Production-ready, not a toy demo</h2>
+      <p>Every design decision is deliberate and documented in the codebase.</p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>Sandboxed code execution</h3>
+        <p>LLM-generated plot code runs in an isolated namespace with
+           <code>sanitize_code()</code> guardrails. A 3-attempt retry loop
+           sends errors back to the model for self-correction.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>Priority-ranked charts</h3>
+        <p>Charts are returned as <code>(path, caption, priority)</code> tuples.
+           The PDF builder enforces the 30-page cap by dropping
+           lower-priority visuals first.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧠</div>
+        <h3>Deterministic first</h3>
+        <p>The full pipeline works without any LLM. AI narrative is an
+           additive layer — toggle it on with <code>--ai</code> when
+           Ollama is running.</p>
+      </div>
+      <div class="card card-coral">
+        <div class="card-icon">🩺</div>
+        <h3>Deep missing-values analysis</h3>
+        <p>Co-missingness correlation between affected columns, column
+           type-aware imputation strategies, and copy-paste pandas code
+           per column.</p>
+      </div>
+      <div class="card card-coral">
+        <div class="card-icon">⚡</div>
+        <h3>One orchestrator</h3>
+        <p><code>pipeline.run_pipeline()</code> is the single entry point.
+           Both the CLI and Streamlit UI call it. No duplicated logic,
+           no diverging behaviour.</p>
+      </div>
+      <div class="card card-gold">
+        <div class="card-icon">🐳</div>
+        <h3>Docker-ready</h3>
+        <p>Two-service Compose setup: <code>eda-pipeline</code> + Ollama sidecar.
+           Data and outputs directories are volume-mounted so files persist
+           across container restarts.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUICK START -->
+<section class="section section-light" id="quickstart">
+  <div class="container">
+    <div class="section-header">
+      <span class="label">Quick start</span>
+      <h2>Running in under 2 minutes</h2>
+      <p>Fast mode needs no Ollama. AI mode adds 30–90 s and a model download.</p>
+    </div>
+
+    <div class="install-grid">
+      <div class="install-step">
+        <h4>Step 1 — Clone and install</h4>
+        <div class="install-code">
+          <span class="gray"># Clone</span><br>
+          git clone https://github.com/<br>
+          &nbsp;&nbsp;Sujay1709/agentic-eda-pipeline<br>
+          cd agentic-eda-pipeline<br><br>
+          <span class="gray"># Create virtual env</span><br>
+          python -m venv .venv<br>
+          source .venv/bin/activate<br><br>
+          <span class="gray"># Install</span><br>
+          pip install -r requirements.txt
+        </div>
+      </div>
+
+      <div class="install-step">
+        <h4>Step 2 — Run fast mode (no AI)</h4>
+        <div class="install-code">
+          <span class="gray"># Streamlit web UI</span><br>
+          streamlit run app.py<br>
+          <span class="gray"># → open http://localhost:8501</span><br><br>
+          <span class="gray"># OR — CLI</span><br>
+          python eda_pipeline.py \<br>
+          &nbsp;&nbsp;--input data/your_file.csv<br><br>
+          <span class="gray"># PDF auto-opens on macOS / Linux</span>
+        </div>
+      </div>
+
+      <div class="install-step">
+        <h4>Step 3 — Enable AI narrative</h4>
+        <div class="install-code">
+          <span class="gray"># Install Ollama → https://ollama.com</span><br>
+          ollama pull mistral<br><br>
+          <span class="gray"># CLI with AI</span><br>
+          python eda_pipeline.py \<br>
+          &nbsp;&nbsp;--input data/your_file.csv \<br>
+          &nbsp;&nbsp;--ai --model mistral<br><br>
+          <span class="gray"># Or toggle in the Streamlit sidebar</span>
+        </div>
+      </div>
+
+      <div class="install-step">
+        <h4>Step 4 — Generate a test dataset</h4>
+        <div class="install-code">
+          python3 -c "<br>
+          import pandas as pd, numpy as np<br>
+          df = pd.DataFrame({<br>
+          &nbsp;&nbsp;'price': np.random.uniform(100,500,200),<br>
+          &nbsp;&nbsp;'volume': np.random.randint(1000,50000,200),<br>
+          &nbsp;&nbsp;'category': np.random.choice(<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;['Tech','Finance','Health'],200)<br>
+          })<br>
+          df.to_csv('data/sample.csv',index=False)<br>
+          "
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REPORT PREVIEW -->
+<section class="section section-dark" id="report">
+  <div class="container">
+    <div class="section-header">
+      <span class="label">Output</span>
+      <h2>What the report looks like</h2>
+      <p>Six sections, always in priority order. Lower-value content is
+         trimmed automatically if the page cap is reached.</p>
+    </div>
+
+    <div class="report-preview">
+      <div class="page-thumb">
+        <div class="pg-label">Cover</div>
+        <div class="pg-bar full" style="background:rgba(42,140,126,.6)"></div>
+        <div class="pg-bar w80"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin:8px 0">
+          <div style="height:22px;background:rgba(42,140,126,.3);border-radius:2px"></div>
+          <div style="height:22px;background:rgba(42,140,126,.3);border-radius:2px"></div>
+          <div style="height:22px;background:rgba(42,140,126,.3);border-radius:2px"></div>
+          <div style="height:22px;background:rgba(42,140,126,.2);border-radius:2px"></div>
+          <div style="height:22px;background:rgba(42,140,126,.2);border-radius:2px"></div>
+          <div style="height:22px;background:rgba(42,140,126,.2);border-radius:2px"></div>
+        </div>
+        <div class="pg-bar w60"></div>
+        <div class="pg-bar w45"></div>
+        <div class="pg-bar w80"></div>
+      </div>
+
+      <div class="page-thumb">
+        <div class="pg-label">Overview</div>
+        <div class="pg-bar full" style="background:rgba(42,140,126,.4)"></div>
+        <div class="pg-bar w80"></div>
+        <div class="pg-bar w60"></div>
+        <div style="height:6px"></div>
+        <div class="pg-bar w45"></div>
+        <div class="pg-bar w80"></div>
+        <div class="pg-bar w60"></div>
+        <div class="pg-bar w45"></div>
+        <div class="pg-bar w80"></div>
+      </div>
+
+      <div class="page-thumb">
+        <div class="pg-label">1. Dataset Overview</div>
+        <div class="pg-bar full" style="background:rgba(42,140,126,.5)"></div>
+        <div style="height:4px"></div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:3px">
+          <div class="pg-bar full"></div><div class="pg-bar w80"></div>
+          <div class="pg-bar full"></div><div class="pg-bar full"></div>
+          <div class="pg-bar full"></div><div class="pg-bar w60"></div>
+          <div class="pg-bar full"></div><div class="pg-bar w80"></div>
+          <div class="pg-bar full"></div><div class="pg-bar w45"></div>
+        </div>
+      </div>
+
+      <div class="page-thumb">
+        <div class="pg-label">2. Missing Values</div>
+        <div class="pg-bar full" style="background:rgba(192,70,78,.5)"></div>
+        <div style="height:4px"></div>
+        <div class="pg-chart">
+          <div class="bar" style="height:90%;background:#c0464e"></div>
+          <div class="bar" style="height:30%;background:#c0464e"></div>
+          <div class="bar" style="height:0"></div>
+          <div class="bar" style="height:0"></div>
+          <div class="bar" style="height:0"></div>
+        </div>
+        <div class="pg-bar w60"></div>
+        <div class="pg-bar w80"></div>
+        <div class="pg-bar w45"></div>
+      </div>
+
+      <div class="page-thumb">
+        <div class="pg-label">3. Visualisations</div>
+        <div class="pg-bar full" style="background:rgba(42,140,126,.4)"></div>
+        <div style="height:4px"></div>
+        <div class="pg-chart">
+          <div class="bar" style="height:40%"></div>
+          <div class="bar" style="height:70%"></div>
+          <div class="bar" style="height:90%"></div>
+          <div class="bar" style="height:55%"></div>
+          <div class="bar" style="height:30%"></div>
+          <div class="bar" style="height:80%"></div>
+          <div class="bar" style="height:65%"></div>
+        </div>
+        <div class="pg-chart" style="margin-top:6px">
+          <div class="bar" style="height:60%"></div>
+          <div class="bar" style="height:85%"></div>
+          <div class="bar" style="height:45%"></div>
+          <div class="bar" style="height:70%"></div>
+          <div class="bar" style="height:95%"></div>
+        </div>
+      </div>
+
+      <div class="page-thumb">
+        <div class="pg-label">6. Conclusion</div>
+        <div class="pg-bar full" style="background:rgba(42,140,126,.4)"></div>
+        <div style="height:4px"></div>
+        <div class="pg-bar w80"></div>
+        <div class="pg-bar full"></div>
+        <div class="pg-bar w60"></div>
+        <div style="height:6px"></div>
+        <div class="pg-bar w45"></div>
+        <div class="pg-bar w80"></div>
+        <div class="pg-bar w60"></div>
+        <div class="pg-bar w80"></div>
+      </div>
+    </div>
+
+    <!-- CLI snippet -->
+    <div class="code-demo" style="margin-top:52px">
+      <div class="code-bar">
+        <div style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#FFBD2E;margin:0 5px"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:#28C840"></div>
+        <span style="margin-left:10px">eda_pipeline.py — full CLI reference</span>
+      </div>
+      <div class="code-body">
+        <span class="c"># Fast mode — deterministic, no Ollama needed</span><br>
+        <span class="n">python</span> eda_pipeline.py <span class="k">--input</span> data/titanic.csv<br><br>
+        <span class="c"># With AI narrative (needs: ollama pull mistral)</span><br>
+        <span class="n">python</span> eda_pipeline.py <span class="k">--input</span> data/titanic.csv <span class="k">--ai</span> <span class="k">--model</span> <span class="s">mistral</span><br><br>
+        <span class="c"># Limit pages and charts for large datasets</span><br>
+        <span class="n">python</span> eda_pipeline.py <span class="k">--input</span> data/titanic.csv <span class="k">--max-pages</span> <span class="v">20</span> <span class="k">--max-charts</span> <span class="v">12</span><br><br>
+        <span class="c"># Streamlit web UI</span><br>
+        <span class="n">streamlit</span> run app.py<span class="p">  </span><span class="c"># → http://localhost:8501</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo">Agentic <span>EDA</span> Pipeline</div>
+  <p>
+    Built by <a href="https://github.com/Sujay1709">Sujay Gopal</a> ·
+    <a href="https://github.com/Sujay1709/agentic-eda-pipeline">GitHub</a> ·
+    <a href="https://github.com/Sujay1709/agentic-eda-pipeline/blob/main/CONTRIBUTING.md">Contributing</a> ·
+    <a href="https://github.com/Sujay1709/agentic-eda-pipeline/blob/main/DEPLOYMENT.md">Deployment</a>
+  </p>
+  <ul class="foot-links">
+    <li><a href="https://ollama.com">Ollama</a></li>
+    <li><a href="https://streamlit.io">Streamlit</a></li>
+    <li><a href="https://py-pdf.github.io/fpdf2">fpdf2</a></li>
+    <li><a href="https://python.langchain.com">LangChain</a></li>
+  </ul>
+  <p style="margin-top:20px;font-size:11px">MIT License</p>
+</footer>
+
+</body>
+</html>

@@ -11,6 +11,7 @@ import os
 import sys
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Make the pipeline importable regardless of where Streamlit is launched from.
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +24,50 @@ st.set_page_config(
     page_icon="📊",
     layout="wide",
 )
+
+
+# ---------------------------------------------------------------------------
+# Landing page
+#
+# The first thing visitors see is the marketing landing page (landing.html).
+# Its "Launch app" buttons link to ?app=1, which flips us into the tool view.
+# A session flag keeps the user in the tool across reruns.
+# ---------------------------------------------------------------------------
+if st.query_params.get("app") == "1":
+    st.session_state.entered = True
+
+
+def render_landing() -> None:
+    """Render the static landing page full-bleed, with no Streamlit chrome."""
+    st.markdown(
+        """
+        <style>
+          [data-testid="stSidebar"], [data-testid="stHeader"] { display: none; }
+          .block-container { padding: 0 !important; max-width: 100% !important; }
+          [data-testid="stAppViewContainer"] { background: #121C30; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    landing_path = os.path.join(APP_DIR, "landing.html")
+    with open(landing_path, "r", encoding="utf-8") as f:
+        components.html(f.read(), height=4400, scrolling=True)
+
+
+if not st.session_state.get("entered"):
+    render_landing()
+    st.stop()
+
+
+# ---------------------------------------------------------------------------
+# Tool view
+# ---------------------------------------------------------------------------
+top_l, top_r = st.columns([6, 1])
+with top_r:
+    if st.button("← Home"):
+        st.session_state.entered = False
+        st.query_params.clear()
+        st.rerun()
 
 st.title("📊 Agentic EDA Report Generator")
 st.write(
