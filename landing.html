@@ -889,5 +889,21 @@ footer a:hover { text-decoration: underline; }
   <p style="margin-top:20px;font-size:11px">MIT License</p>
 </footer>
 
+<script>
+// This page renders inside a Streamlit components.html() iframe (via srcdoc),
+// where native "#anchor" fragment navigation does not reliably scroll. Intercept
+// in-page anchor clicks and scroll the target into view within the iframe instead.
+document.addEventListener("click", function (e) {
+  var link = e.target.closest('a[href^="#"]');
+  if (!link) return;
+  var id = link.getAttribute("href").slice(1);
+  if (!id) return;
+  var target = document.getElementById(id);
+  if (!target) return;
+  e.preventDefault();
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+</script>
+
 </body>
 </html>
