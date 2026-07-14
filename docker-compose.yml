@@ -1,0 +1,53 @@
+# Two-service stack:
+#   • eda-pipeline — the Streamlit app (this repo)
+#   • ollama       — local LLM + embeddings sidecar (no paid APIs)
+#
+# Usage:
+#   docker compose up --build
+#   # then pull the models once (into the running ollama container):
+#   docker compose exec ollama ollama pull mistral
+#   docker compose exec ollama ollama pull nomic-embed-text
+#   # open http://localhost:8501
+
+services:
+  eda-pipeline:
+    build: .
+    container_name: eda-pipeline
+    ports:
+      - "8501:8501"
+    environment:
+      # App login (override these!).
+      APP_USERNAME: ${APP_USERNAME:-admin}
+      APP_PASSWORD: ${APP_PASSWORD:-admin}
+      # Point the app at the Ollama service.
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral}
+      EMBEDCHAIN_DB_DIR: /app/data/embedchain
+    volumes:
+      # Persist uploads, generated reports, and the vector store across restarts.
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      # Keep pulled models so you don't re-download on every restart.
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+    # To use an NVIDIA GPU, uncomment the block below (needs nvidia-container-toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  ollama_models:

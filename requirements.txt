@@ -10,3 +10,7 @@ fpdf2>=2.7.0
 Pillow>=10.0.0
 streamlit>=1.36.0
 openpyxl>=3.1.0
+
+# Chat with Docs (local RAG). Uses Ollama for both the LLM and embeddings,
+# with Chroma as the vector store — no paid API keys required.
+embedchain>=0.1.120

@@ -1,0 +1,21 @@
+# Keep the build context small.
+.git
+.gitignore
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.env
+.DS_Store
+
+# Runtime data / generated artifacts (mounted as volumes instead).
+outputs/
+data/uploads/
+data/embedchain/
+
+# Docs / local tooling not needed in the image.
+.claude/
+*.md
+landing.html.bak
