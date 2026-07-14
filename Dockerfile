@@ -24,9 +24,14 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install Python deps first for better layer caching.
-COPY requirements.txt .
+# Install Python deps in two steps. Installing the core first means the RAG
+# resolve runs against already-satisfied packages instead of re-resolving the
+# whole tree from scratch — this avoids the pathological pip backtracking that
+# happens when embedchain + langchain are resolved together. The image uses
+# Python 3.11, so the optional EmbedChain deps install cleanly here.
+COPY requirements.txt requirements-rag.txt ./
 RUN pip install -r requirements.txt
+RUN pip install -r requirements-rag.txt
 
 # Copy the application code.
 COPY . .

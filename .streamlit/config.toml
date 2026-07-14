@@ -1,0 +1,14 @@
+# Streamlit configuration for "Agentic EDA Analyst".
+# Theme matches the app's teal-on-dark palette.
+
+[theme]
+primaryColor = "#2A8C7E"
+backgroundColor = "#121C30"
+secondaryBackgroundColor = "#1C2C48"
+textColor = "#FFFFFF"
+font = "sans serif"
+
+[server]
+headless = true
+# NOTE: the public URL/subdomain (https://agentic-eda-analyst.streamlit.app) is
+# chosen in the Streamlit Community Cloud deploy dialog, not here.

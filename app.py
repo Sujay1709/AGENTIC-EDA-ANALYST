@@ -24,7 +24,7 @@ from auth import require_login, logout
 from rag_chat import render_chat_with_docs
 
 st.set_page_config(
-    page_title="Agentic EDA Report Generator",
+    page_title="Agentic EDA Analyst",
     page_icon="📊",
     layout="wide",
 )
@@ -58,14 +58,28 @@ def render_landing() -> None:
         """
         <style>
           [data-testid="stSidebar"], [data-testid="stHeader"] { display: none; }
-          .block-container { padding: 0 !important; max-width: 100% !important; }
+          .block-container { padding: 6px 12px 0 !important; max-width: 100% !important; }
           [data-testid="stAppViewContainer"] { background: #121C30; }
-          /* Make the embedded landing iframe fill the viewport, no empty gap. */
-          .stApp iframe { height: 100vh !important; min-height: 100vh; border: 0; }
+          /* Full-height landing frame beneath the native launch bar, no gap. */
+          .stApp iframe { height: calc(100vh - 58px) !important; min-height: 460px; border: 0; }
+          div[data-testid="stButton"] > button {
+              background: #2A8C7E !important; color: #fff !important; border: none !important;
+              font-weight: 600 !important;
+          }
+          div[data-testid="stButton"] > button:hover { background: #38B2A2 !important; }
         </style>
         """,
         unsafe_allow_html=True,
     )
+    # The marketing page is embedded in a sandboxed component iframe, so its own
+    # "Launch app" links can't navigate the top window. This native Streamlit
+    # button is the reliable way into the tool view.
+    _, launch_col = st.columns([5, 1])
+    with launch_col:
+        if st.button("Launch app →", type="primary", key="enter_app"):
+            st.session_state.entered = True
+            st.rerun()
+
     landing_path = os.path.join(APP_DIR, "landing.html")
     with open(landing_path, "r", encoding="utf-8") as f:
         # scrolling=True → the landing scrolls inside a single full-height frame.

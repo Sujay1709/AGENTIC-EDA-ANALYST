@@ -24,9 +24,15 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral}
       EMBEDCHAIN_DB_DIR: /app/data/embedchain
     volumes:
-      # Persist uploads, generated reports, and the vector store across restarts.
-      - ./data:/app/data
-      - ./outputs:/app/outputs
+      # Named volumes persist uploads, generated reports, and the vector store
+      # across restarts. Using named volumes (instead of ./data bind mounts)
+      # avoids Docker Desktop "mounts denied / path not shared" errors on macOS.
+      # Docker seeds them from the image contents on first run.
+      # If you'd rather have the files directly on your host, replace these with
+      # `- ./data:/app/data` etc. and add this folder under
+      # Docker Desktop → Settings → Resources → File Sharing.
+      - eda_data:/app/data
+      - eda_outputs:/app/outputs
     depends_on:
       - ollama
     restart: unless-stopped
@@ -51,3 +57,5 @@ services:
 
 volumes:
   ollama_models:
+  eda_data:
+  eda_outputs:

@@ -4,7 +4,6 @@ import inspect
 import argparse
 import platform
 import subprocess
-from langchain_ollama import OllamaLLM
 
 # Ensure imports work regardless of where the script is called from
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -58,6 +57,10 @@ def run_pipeline(
     llm = None
     if ai_narrative or use_llm_plots:
         print("[Pipeline] Initializing LLM...")
+        # Imported lazily so the fast deterministic path (and the Streamlit app)
+        # runs with no dependency on langchain_ollama / Ollama at all.
+        from langchain_ollama import OllamaLLM
+
         # Cap output length and pin temperature so generations are fast and stable.
         llm = OllamaLLM(model=model, temperature=0, num_predict=700)
 

@@ -1,6 +1,10 @@
-langchain>=0.3.0
-langchain-ollama>=0.2.0
-langchain-core>=0.3.0
+# Pinned to the 0.3 line. embedchain (optional RAG) requires langchain<0.4, and
+# the langchain-ollama 0.3/1.x releases need a newer langchain-core than that,
+# which triggers `ImportError: cannot import name 'content' from
+# langchain_core.messages`. Keeping everything on 0.3.x avoids the clash.
+langchain>=0.3.1,<0.4
+langchain-ollama>=0.2.3,<0.3
+langchain-core>=0.3.33,<0.4
 pandas>=2.0.0
 matplotlib>=3.7.0
 seaborn>=0.13.0
@@ -11,6 +15,8 @@ Pillow>=10.0.0
 streamlit>=1.36.0
 openpyxl>=3.1.0
 
-# Chat with Docs (local RAG). Uses Ollama for both the LLM and embeddings,
-# with Chroma as the vector store — no paid API keys required.
-embedchain>=0.1.120
+# NOTE: "Chat with Docs" (EmbedChain) is an OPTIONAL feature and is intentionally
+# NOT listed here, because EmbedChain currently supports Python <= 3.13.2 only.
+# The core EDA app runs on any modern Python. To enable Chat with Docs, use a
+# Python 3.11/3.12 environment and install the extra deps:
+#     pip install -r requirements-rag.txt

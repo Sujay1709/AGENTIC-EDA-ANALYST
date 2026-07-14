@@ -1,0 +1,16 @@
+# Optional dependencies for the "Chat with Docs" RAG feature (rag_chat.py).
+#
+# IMPORTANT: EmbedChain currently supports Python >=3.9 and <=3.13.2 only.
+# If `pip install` reports "Could not find a version that satisfies the
+# requirement embedchain", your Python is too new. Create a 3.11 or 3.12
+# environment for this feature, e.g.:
+#
+#     conda create -n eda-rag python=3.12 -y && conda activate eda-rag
+#     pip install -r requirements.txt -r requirements-rag.txt
+#
+# The core EDA app does NOT need this file — it's a lazy, optional import.
+
+# Pinned to an exact version so pip doesn't backtrack across ~28 releases
+# (which downloads metadata for the entire langchain/langchain-openai version
+# space and can make the build hang for many minutes).
+embedchain==0.1.128
